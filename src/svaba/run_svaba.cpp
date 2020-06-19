@@ -1,5 +1,6 @@
 #include "run_svaba.h"
 
+#include <fstream>
 #include <getopt.h>
 #include <iostream>
 #include <sstream>
@@ -10,6 +11,7 @@
 
 #include "SeqLib/ReadFilter.h"
 #include "KmerFilter.h"
+#include "svabaRead.h"
 #include "vcf.h"
 #include "DBSnpFilter.h"
 #include "svabaUtils.h"
@@ -137,6 +139,7 @@ namespace opt {
 
   // data
   static BamMap bam;
+  static BamMap bx_bam;
   static std::string refgenome = "/seq/references/Homo_sapiens_assembly19/v1/Homo_sapiens_assembly19.fasta";
   static std::string microbegenome; // = "/xchip/gistic/Jeremiah/Projects/SnowmanFilters/viral.1.1.genomic_ns.fna";
   static std::string simple_file; //  file of simple repeats as a filter
@@ -191,9 +194,10 @@ enum {
   OPT_OVERRIDE_REFERENCE_CHECK
 };
 
-static const char* shortopts = "hzIAt:n:p:v:r:G:e:k:c:a:m:B:D:Y:S:L:s:V:R:K:E:C:x:M:";
+static const char* shortopts = "hzIAb:t:n:p:v:r:G:e:k:c:a:m:B:D:Y:S:L:s:V:R:K:E:C:x:M:";
 static const struct option longopts[] = {
   { "help",                    no_argument, NULL, 'h' },
+  { "bx-bam",                  required_argument, NULL, 'b' },
   { "tumor-bam",               required_argument, NULL, 't' },
   { "germline",                no_argument, NULL, OPT_GERMLINE },  
   { "all-contigs",             no_argument, NULL, 'A' },  
@@ -261,6 +265,7 @@ static const char *RUN_USAGE_MESSAGE =
 "  Main input\n"
 "  -G, --reference-genome               Path to indexed reference genome to be used by BWA-MEM.\n"
 "  -t, --case-bam                       Case BAM/CRAM/SAM file (eg tumor). Can input multiple.\n"
+"  -b, --bx-bam                         Case BAM/CRAM/SAM file(s) pre-processed with bxtools convert, sorted and indexed by BX tag. Can input multiple.\n"
 "  -n, --control-bam                    (optional) Control BAM/CRAM/SAM file (eg normal). Can input multiple.\n"
 "  -k, --region                         Run on targeted intervals. Accepts BED file or Samtools-style string\n"
 "      --germline                       Sets recommended settings for case-only analysis (eg germline). (-I, -L5, assembles NM >= 3 reads)\n"
@@ -828,9 +833,13 @@ void parseRunOptions(int argc, char** argv) {
     case 'C': arg >> opt::max_cov;  break;
     case OPT_NUM_TO_SAMPLE: arg >> opt::num_to_sample;  break;
     case OPT_READ_TRACK: opt::read_tracking = true; break;
-	case 't': 
-	  tmp = svabaUtils::__bamOptParse(opt::bam, arg, sample_number++, "t");
-	  if (opt::main_bam == "-")
+
+  case 'b':
+      tmp = svabaUtils::__bamOptParse(opt::bx_bam, arg, sample_number++, "b");
+      break;
+	case 't':
+      tmp = svabaUtils::__bamOptParse(opt::bam, arg, sample_number++, "t");
+    if (opt::main_bam == "-")
 	    opt::main_bam = tmp;
 	  break;
 	case 'n': 
@@ -957,12 +966,6 @@ bool runWorkItem(const SeqLib::GenomicRegion& region, svabaThreadUnit& wu, long 
   std::unordered_set<std::string> dedupe;
   collect_and_clear_reads(wu.walkers, bav_this, all_seqs, dedupe);
 
-  std::set<BxBarcode> window_barcodes = svabaBxBamWalker::collectBxBarcodes(bav_this);
-
-  WRITELOG("Collected number of tags", opt::verbose > 1, false);
-  WRITELOG(window_barcodes.size(), opt::verbose > 1, false);
-  for(auto bxtag : window_barcodes)
-    WRITELOG(bxtag, opt::verbose > 1, false);
 
   // adjust counts and timer
   st.stop("r");
@@ -974,7 +977,16 @@ bool runWorkItem(const SeqLib::GenomicRegion& region, svabaThreadUnit& wu, long 
     collect_and_clear_reads(wu.walkers, bav_this, all_seqs, dedupe);
     st.stop("m");
   }
-  
+
+
+  ss << "Reads in local assembly before BX import: " << bav_this.size() << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+  ss.str(std::string());
+  // Add BX associated reads to bav_this
+  collect_bx_reads(wu.bx_walkers, bav_this, all_seqs, dedupe);
+  ss << "Reads in local assembly after BX import: " << bav_this.size() << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+  ss.str(std::string());
 
   // do the discordant read clustering
   DiscordantClusterMap dmap, dmap_tmp;
@@ -1266,9 +1278,9 @@ void sendThreads(SeqLib::GRC& regions_torun) {
   wqueue<svabaWorkItem*>  queue;
   std::vector<ConsumerThread<svabaWorkItem>*> threadqueue;
   for (int i = 0; i < opt::numThreads; i++) {
-    ConsumerThread<svabaWorkItem>* threadr = new ConsumerThread<svabaWorkItem>(queue, opt::verbose > 0,
-										   opt::refgenome, opt::microbegenome,
-										   opt::bam);
+    ConsumerThread<svabaWorkItem>* threadr =
+        new ConsumerThread<svabaWorkItem>(queue, opt::verbose > 0,
+                                          opt::refgenome, opt::microbegenome, opt::bam, opt::bx_bam);
     threadr->start();
     threadqueue.push_back(threadr);
   }
@@ -1841,7 +1853,7 @@ void collect_and_clear_reads(WalkerMap& walkers, svabaReadVector& brv, std::vect
     for (auto& r : w.second.reads) {
       std::string sr = r.SR();
       if (!dedupe.count(sr)) {
-	brv.push_back(r); 
+        brv.push_back(r); 
         dedupe.insert(sr);
       }
     }
@@ -1857,6 +1869,50 @@ void collect_and_clear_reads(WalkerMap& walkers, svabaReadVector& brv, std::vect
     w.second.all_seqs.clear();
     w.second.reads.clear();
   }
+}
+
+void collect_bx_reads(BxWalkerMap &bx_walkers,
+                      svabaReadVector &brv,
+                      std::vector<char *> &learn_seqs,
+                      std::unordered_set<std::string> &dedupe) {
+
+  std::set<BxBarcode> window_barcodes = svabaBxBamWalker::collectBxBarcodes(brv);
+
+  // Lets do some Logging
+  ss.str(std::string());
+  ss << "Collected number of tags: " << window_barcodes.size() << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+
+  ss.str(std::string());
+  ss << "The tags are: ";
+  for (auto bxtag : window_barcodes)
+      ss << bxtag << ",";
+  ss << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+  ss.str(std::string());
+
+  int found = 0;
+  for (auto &bw : bx_walkers) {
+    // WRITELOG(bw.first, opt::verbose > 1, false);
+    // WRITELOG(bw.second.IsOpen(), opt::verbose > 1, false);
+    svabaReadVector bx_reads = bw.second.fetchReadsByBxBarcode(window_barcodes);
+    // now lets add the reads while checking for duplicates
+    for (auto &bx_r : bx_reads) {
+      std::string sr = bx_r.SR();
+      // have we seen this sequence before?
+      if (!dedupe.count(sr)) {
+        brv.push_back(bx_r);
+        dedupe.insert(sr);
+        found++;
+      }
+    }
+
+  ss << "Collected number of reads via BX: " << found << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+      // should we do learning on the BX reads?
+  }
+  ss.str(std::string());
+
 }
 
 void WriteFilesOut(svabaThreadUnit& wu) {

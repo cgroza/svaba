@@ -44,13 +44,13 @@ svabaRead::svabaRead(const SeqLib::BamRecord r, const std::string& prefix) {
   }
 
 std::string svabaRead::Prefix() const { 
-  assert(p[0]=='t' || p[0] == 'n');
+  assert(p[0]=='t' || p[0] == 'n' || p[0] == 'b');
   return std::string(p, 4); 
 }
 
 std::string svabaRead::Seq() const {
 
-  assert(seq);
+  // assert(seq);
   if (!seq)
     return Sequence();
   else

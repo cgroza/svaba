@@ -6,6 +6,7 @@
 
 #include "svabaThreadUnit.h"
 #include "SeqLib/RefGenome.h"
+#include "svabaBxBamWalker.h"
 
 typedef std::map<std::string, svabaBamWalker> WalkerMap;
 
@@ -123,10 +124,10 @@ template <class T>
   class ConsumerThread : public svabaThread {
  
 public:
-
- ConsumerThread(wqueue<T*>& queue, bool verbose, 
-		const std::string& ref, const std::string& vir,
-		const std::map<std::string, std::string>& bams) : m_queue(queue), m_verbose(verbose) {
+  ConsumerThread(wqueue<T *> &queue, bool verbose, const std::string &ref,
+                 const std::string &vir,
+                 const std::map<std::string, std::string> &bams,
+                 const std::map<std::string, std::string> &bx_bams) : m_queue(queue), m_verbose(verbose) {
 
     // load the reference genomce
     if (m_verbose)
@@ -150,10 +151,15 @@ public:
       wu.walkers[b.first].Open(b.second);
       wu.walkers[b.first].prefix = b.first;
     }
-    
-
+    if (m_verbose)
+      std::cerr << "\tOpening BX BAMs for thread " << self() << std::endl;
+    for (auto &b : bx_bams) {
+      wu.bx_walkers[b.first] = svabaBxBamWalker();
+      wu.bx_walkers[b.first].Open(b.second);
+      wu.bx_walkers[b.first].prefix = b.first;
+    }
   }
- 
+
   void* run() {
     // Remove 1 item at a time and process it. Blocks if no items are 
     // available to process.

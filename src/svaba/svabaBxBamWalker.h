@@ -16,7 +16,7 @@
 /* Let's distinguish regular strings from BxBarcodes in the source code */
 typedef std::string BxBarcode;
 
-class svabaBxBamWalker : private SeqLib::BamReader {
+class svabaBxBamWalker : public SeqLib::BamReader {
   /* Reads a BAM file that was produced by the lariat aligner. This file must be
    prepared by flipping the chromosome and BX tag with bxtools convert. Then
    this file must be sorted and indexed by the BX tag using samtools. This
@@ -25,14 +25,16 @@ class svabaBxBamWalker : private SeqLib::BamReader {
 
 public:
   /* bx_bam_path: BAM file indexed by bx tag. */
-  svabaBxBamWalker(const std::string &bx_bam_path);
+  svabaBxBamWalker();
+    svabaBxBamWalker(const std::string &bx_bam_path, const std::string _prefix = "0000");
 
   /*  */
   svabaReadVector fetchReadsByBxBarcode(const BxBarcode &bx_barcode);
   svabaReadVector fetchReadsByBxBarcode(const std::set<BxBarcode> &bx_barcodes);
-  SeqLib::BamHeader Header() const;
 
   static std::set<BxBarcode> collectBxBarcodes(const svabaReadVector &reads);
+  std::string prefix;
+
 };
 
 #endif

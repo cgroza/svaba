@@ -5,6 +5,7 @@
 
 #include <map>
 #include "svabaBamWalker.h"
+#include "svabaBxBamWalker.h"
 #include "AlignedContig.h"
 #include "DiscordantCluster.h"
 #include "BreakPoint.h"
@@ -12,11 +13,14 @@
 #include "SeqLib/RefGenome.h"
 
 typedef std::map<std::string, svabaBamWalker> WalkerMap;
+typedef std::map<std::string, svabaBxBamWalker> BxWalkerMap;
 
 struct svabaThreadUnit {
   
   // its own thread-safe versions of readers and genomes
   WalkerMap walkers;
+  BxWalkerMap bx_walkers;
+
   SeqLib::RefGenome * ref_genome = nullptr;
   SeqLib::RefGenome * vir_genome = nullptr;
   //SeqLib::GRC m_bad_regions;// bad region tracker for this thread

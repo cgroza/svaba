@@ -16,6 +16,7 @@
 #include "SeqLib/RefGenome.h"
 #include "SeqLib/BFC.h"
 
+#include "svabaThreadUnit.h"
 #include "svabaUtils.h"
 #include "AlignedContig.h"
 #include "svabaBamWalker.h"
@@ -56,6 +57,8 @@ void remove_hardclips(svabaReadVector& brv);
 CountPair collect_mate_reads(WalkerMap& walkers, const MateRegionVector& mrv, int round, SeqLib::GRC& this_bad_mate_regions);
 CountPair run_mate_collection_loop(const SeqLib::GenomicRegion& region, WalkerMap& wmap, SeqLib::GRC& badd);
 void collect_and_clear_reads(WalkerMap& walkers, svabaReadVector& brv, std::vector<char*>& learn_seqs, std::unordered_set<std::string>& dedupe);
+// This function augments the reads given by collect_and_clear reads with reads that are associated by BX tag
+void collect_bx_reads(BxWalkerMap& bx_walkers, svabaReadVector &brv, std::vector<char *> &learn_seqs, std::unordered_set<std::string> &dedupe);
 void WriteFilesOut(svabaThreadUnit& wu); 
 void run_test_assembly();
 

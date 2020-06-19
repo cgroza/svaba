@@ -3,9 +3,13 @@
 #include <stdexcept>
 #include <system_error>
 
-svabaBxBamWalker::svabaBxBamWalker(const std::string &bx_bam_path) {
+svabaBxBamWalker::svabaBxBamWalker(const std::string &bx_bam_path, const std::string _prefix) : prefix(_prefix) {
   BamReader();
   Open(bx_bam_path);
+}
+
+svabaBxBamWalker::svabaBxBamWalker() {
+  BamReader();
 }
 
 svabaReadVector
@@ -32,7 +36,7 @@ svabaBxBamWalker::fetchReadsByBxBarcode(const BxBarcode &bx_barcode) {
 
     // Are we still within the same BX block?
     if (GetNextRecord(bx_record))
-      read_vector.push_back(svabaRead(bx_record, "0000"));
+      read_vector.push_back(svabaRead(bx_record, prefix));
     else
       break;
   }
@@ -63,8 +67,4 @@ svabaBxBamWalker::collectBxBarcodes(const svabaReadVector &reads) {
     }
   }
   return barcodes;
-}
-
-SeqLib::BamHeader svabaBxBamWalker::Header() const {
-    return SeqLib::BamReader::Header();
 }

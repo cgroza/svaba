@@ -28,12 +28,21 @@ svaba_LDADD = \
 ##svaba_LDFLAGS = -pthread -std=c++11
 
 svaba_SOURCES = run_svaba.cpp BreakPoint.cpp AlignedContig.cpp AlignmentFragment.cpp \
-		DiscordantCluster.cpp DBSnpFilter.cpp PONFilter.cpp \
-		svabaUtils.cpp svaba.cpp svabaAssemblerEngine.cpp vcf.cpp \
-		DiscordantRealigner.cpp svabaOverlapAlgorithm.cpp svabaASQG.cpp \
-		svabaAssemble.cpp KmerFilter.cpp svabaBamWalker.cpp \
-		refilter.cpp LearnBamParams.cpp \
-		STCoverage.cpp Histogram.cpp BamStats.cpp svabaRead.cpp
+	 		DiscordantCluster.cpp DBSnpFilter.cpp PONFilter.cpp \
+	 		svabaUtils.cpp svaba.cpp svabaAssemblerEngine.cpp vcf.cpp \
+	 		DiscordantRealigner.cpp svabaOverlapAlgorithm.cpp svabaASQG.cpp \
+	 		svabaAssemble.cpp KmerFilter.cpp svabaBamWalker.cpp \
+	 		refilter.cpp LearnBamParams.cpp \
+	 		STCoverage.cpp Histogram.cpp BamStats.cpp svabaRead.cpp \
+	 		svabaBxBamWalker.cpp
 
+# svaba_SOURCES = testBxBamWalker.cpp BreakPoint.cpp AlignedContig.cpp AlignmentFragment.cpp \
+# 			DiscordantCluster.cpp DBSnpFilter.cpp PONFilter.cpp \
+# 	 		svabaUtils.cpp svabaAssemblerEngine.cpp vcf.cpp \
+# 	 		DiscordantRealigner.cpp svabaOverlapAlgorithm.cpp svabaASQG.cpp \
+# 	 		svabaAssemble.cpp KmerFilter.cpp svabaBamWalker.cpp \
+# 	 		refilter.cpp LearnBamParams.cpp \
+# 	 		STCoverage.cpp Histogram.cpp BamStats.cpp svabaRead.cpp \
+# 	 		svabaBxBamWalker.cpp
 install:
 	mkdir -p ../../bin && mv svaba ../../bin
