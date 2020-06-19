@@ -21,6 +21,7 @@
 #include "svabaBamWalker.h"
 #include "DiscordantCluster.h"
 #include "svabaAssemblerEngine.h"
+#include "svabaBxBamWalker.h"
 
 #include "workqueue.h"
 

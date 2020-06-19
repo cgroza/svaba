@@ -952,9 +952,17 @@ bool runWorkItem(const SeqLib::GenomicRegion& region, svabaThreadUnit& wu, long 
   //SeqLib::BamRecordVector bav_this;
   svabaReadVector bav_this;
 
+
   // collect and clear reads from main round
   std::unordered_set<std::string> dedupe;
   collect_and_clear_reads(wu.walkers, bav_this, all_seqs, dedupe);
+
+  std::set<BxBarcode> window_barcodes = svabaBxBamWalker::collectBxBarcodes(bav_this);
+
+  WRITELOG("Collected number of tags", opt::verbose > 1, false);
+  WRITELOG(window_barcodes.size(), opt::verbose > 1, false);
+  for(auto bxtag : window_barcodes)
+    WRITELOG(bxtag, opt::verbose > 1, false);
 
   // adjust counts and timer
   st.stop("r");
