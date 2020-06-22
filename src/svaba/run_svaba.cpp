@@ -1,5 +1,6 @@
 #include "run_svaba.h"
 
+#include <cstdio>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
@@ -1685,6 +1686,7 @@ void run_assembly(const SeqLib::GenomicRegion& region, svabaReadVector& bav_this
     SeqLib::BamRecordVector ct_alignments;
     main_bwa->AlignSequence(i.Seq, i.Name, ct_alignments, hardclip, SECONDARY_FRAC, SECONDARY_CAP);	
 
+
     if (opt::verbose > 3)
       for (auto& i : ct_alignments)
 	std::cerr << " aligned contig: " << i << std::endl;
@@ -1729,19 +1731,47 @@ void run_assembly(const SeqLib::GenomicRegion& region, svabaReadVector& bav_this
     // alignments that are contained within a microbial alignment
     
     SeqLib::BamRecordVector human_alignments;
+    // First pass to detect the human alignments
     for (auto& j : ct_alignments) {
       // keep human alignments that have < 50% overlap with microbe and have >= 25 bases matched
       if (svabaUtils::overlapSize(j, ct_plus_microbe) < 0.5 * j.Length() && j.NumMatchBases() >= MIN_CONTIG_MATCH) { 
-	human_alignments.push_back(j);
-        master_contigs.push_back(j);
-      } else if (opt::all_contigs) { // if all contigs, we want to keep everything
-        master_contigs.push_back(j);	
+          human_alignments.push_back(j);
       }
     }
-    
+
     if (!human_alignments.size())
       continue;
-    
+
+    // make the aligned contigs
+    AlignedContig ac(human_alignments, prefixes);
+
+    // filter the contigs by local window overlap. Important to remove spurious
+    // contigs when importing reads by BX tag
+    ac.checkLocal(region);
+    // if no local window overlap, skip this contig if we all contigs flag is off
+    if (!ac.hasLocal() && !opt::all_contigs) {
+      ss.str(std::string());
+      ss << ac.getContigName() << " has no local hit, removing contig" << std::endl;
+      WRITELOG(ss.str(), opt::verbose >= 1, true);
+      continue;
+    }
+    // if local window overlap or contigs flag is on, add the contigs to the
+    // master_contigs
+    for (auto &j : ct_alignments) {
+        if (svabaUtils::overlapSize(j, ct_plus_microbe) < 0.5 * j.Length() &&
+            j.NumMatchBases() >= MIN_CONTIG_MATCH)
+            master_contigs.push_back(j);
+      }
+
+    this_alc.push_back(ac);
+
+    ss.str(std::string());
+    ss << ac.getContigName() << " has a local hit" << std::endl;
+    WRITELOG(ss.str(), opt::verbose >= 1, true);
+    ss.str(std::string());
+
+    usv.push_back({i.Name, i.Seq, std::string()});
+
     // add in the microbe alignments
     human_alignments.insert(human_alignments.end(), ct_plus_microbe.begin(), ct_plus_microbe.end());
     
@@ -1762,22 +1792,19 @@ void run_assembly(const SeqLib::GenomicRegion& region, svabaReadVector& bav_this
 	k.AddIntTag("SZ", msize);
       }
 
-    // make the aligned contigs
-    AlignedContig ac(human_alignments, prefixes);
-    
-    // assign the local variable to each
-    ac.checkLocal(region);
-    
-    this_alc.push_back(ac);
-    usv.push_back({i.Name, i.Seq, std::string()});	  
-  } // end loop through contigs
+    } // end loop through contigs
 
   assert(this_alc.size() == usv.size());
 
   // didnt get any contigs that made it all the way through
-  if (!this_alc.size())
+  if (!this_alc.size()) {
+    ss.str(std::string());
+    ss << "Kept " << this_alc.size() << " contigs" << std::endl;
+    WRITELOG(ss.str(), opt::verbose >= 1, true);
+    ss.str(std::string());
     return;
-  
+  }
+
   // Align the reads to the contigs with BWA-MEM
   SeqLib::BWAWrapper bw;
   bw.ConstructIndex(usv);
@@ -1788,7 +1815,6 @@ void run_assembly(const SeqLib::GenomicRegion& region, svabaReadVector& bav_this
   
   // Get contig coverage, discordant matching to contigs, etc
   for (auto& a : this_alc) {
-    
     // repeat sequence filter
     a.assessRepeats();
     
@@ -1800,11 +1826,13 @@ void run_assembly(const SeqLib::GenomicRegion& region, svabaReadVector& bav_this
     // add in the cigar matches
     a.checkAgainstCigarMatches(cigmap);
     // add to the final structure
+    // and filter out contigs without any matches to the local window
     master_alc.push_back(a);
-    
   }
-
-
+  ss.str(std::string());
+  ss << "Kept " << master_alc.size() << " contigs" << std::endl;
+  WRITELOG(ss.str(), opt::verbose >= 1, true);
+  ss.str(std::string());
 }
 
 CountPair collect_mate_reads(WalkerMap& walkers, const MateRegionVector& mrv, int round, SeqLib::GRC& this_bad_mate_regions) {
