@@ -1826,7 +1826,6 @@ void run_assembly(const SeqLib::GenomicRegion& region, svabaReadVector& bav_this
     // add in the cigar matches
     a.checkAgainstCigarMatches(cigmap);
     // add to the final structure
-    // and filter out contigs without any matches to the local window
     master_alc.push_back(a);
   }
   ss.str(std::string());
