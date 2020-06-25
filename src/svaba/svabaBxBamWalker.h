@@ -25,8 +25,10 @@ class svabaBxBamWalker : public SeqLib::BamReader {
 
 public:
   /* bx_bam_path: BAM file indexed by bx tag. */
-  svabaBxBamWalker();
-    svabaBxBamWalker(const std::string &bx_bam_path, const std::string _prefix = "0000");
+    svabaBxBamWalker();
+    svabaBxBamWalker(const std::string &bx_bam_path,
+                     const std::string _prefix = "0000",
+                     bool _weird_reads_only = true);
 
   /*  */
   svabaReadVector fetchReadsByBxBarcode(const BxBarcode &bx_barcode);
@@ -34,6 +36,12 @@ public:
 
   static std::set<BxBarcode> collectBxBarcodes(const svabaReadVector &reads);
   std::string prefix;
+
+  static bool isBxReadWeird(SeqLib::BamRecord &r);
+  static const int POOR_ALIGNMENT_MAX_MAPQ = 30;
+
+private:
+    bool weird_reads_only;
 
 };
 
