@@ -79,8 +79,8 @@ bool svabaBxBamWalker::isBxReadWeird(SeqLib::BamRecord &r) {
   // NOTE: the ProperPair flag is part of the SAM specification and is set by
   // the aligner Includes information on insert size, mate read orientation
   // etc...
-  bool isWeird = !r.PairMappedFlag() || !r.MappedFlag() || !r.ProperPair() ||
-                 (r.MapQuality() < POOR_ALIGNMENT_MAX_MAPQ);
+    bool isWeird = !r.PairMappedFlag() || !r.MappedFlag();
+      // || !r.ProperPair() || (r.MapQuality() < POOR_ALIGNMENT_MAX_MAPQ);
 
   // report which flag was set
 #ifdef DEBUG_SVABA_BX_BAM_WALKER

@@ -38,7 +38,7 @@ public:
   std::string prefix;
 
   static bool isBxReadWeird(SeqLib::BamRecord &r);
-  static const int POOR_ALIGNMENT_MAX_MAPQ = 30;
+  static const int POOR_ALIGNMENT_MAX_MAPQ = 10;
 
 private:
     bool weird_reads_only;
