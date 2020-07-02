@@ -23,11 +23,9 @@ svabaBxBamWalker::fetchReadsByBxBarcode(const BxBarcode &bx_barcode) {
   SeqLib::GenomicRegion bx_region(bx_barcode, "1", "2", header);
 
   bool success_seek = SetRegion(bx_region);
+  // this BX tag does not exist in this BxBamWalker
   if (!success_seek) {
-    auto ex =
-        new std::invalid_argument("Could not set region to " + bx_barcode);
-    std::cerr << ex->what() << std::endl;
-    throw ex;
+      return read_vector;
   }
 
   // BX tags are sorted and indexed in large contiguous blocks within the BAM.
