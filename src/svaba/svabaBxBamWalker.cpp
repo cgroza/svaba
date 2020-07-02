@@ -22,11 +22,12 @@ svabaBxBamWalker::fetchReadsByBxBarcode(const BxBarcode &bx_barcode) {
   SeqLib::BamHeader header = Header();
   SeqLib::GenomicRegion bx_region(bx_barcode, "1", "2", header);
 
-  bool success_seek = SetRegion(bx_region);
-  // this BX tag does not exist in this BxBamWalker
-  if (!success_seek) {
+  // Check if this barcode exists in this BxBamWalker
+  if (header.Name2ID(bx_barcode) < 0) {
       return read_vector;
   }
+
+  SetRegion(bx_region);
 
   // BX tags are sorted and indexed in large contiguous blocks within the BAM.
   // Each BX tag is a region. Therefore, we stop when we exhaust the region.
