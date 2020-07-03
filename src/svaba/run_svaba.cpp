@@ -979,16 +979,6 @@ bool runWorkItem(const SeqLib::GenomicRegion& region, svabaThreadUnit& wu, long 
     st.stop("m");
   }
 
-
-  ss << "Reads in local assembly before BX import: " << bav_this.size() << std::endl;
-  WRITELOG(ss.str(), opt::verbose > 1, false);
-  ss.str(std::string());
-  // Add BX associated reads to bav_this
-  collect_bx_reads(wu.bx_walkers, bav_this, all_seqs, dedupe);
-  ss << "Reads in local assembly after BX import: " << bav_this.size() << std::endl;
-  WRITELOG(ss.str(), opt::verbose > 1, false);
-  ss.str(std::string());
-
   // do the discordant read clustering
   DiscordantClusterMap dmap, dmap_tmp;
   
@@ -1086,7 +1076,16 @@ bool runWorkItem(const SeqLib::GenomicRegion& region, svabaThreadUnit& wu, long 
   }
 
   st.stop("k");
-  
+
+  ss << "Reads in local assembly before BX import: " << bav_this.size() << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+  ss.str(std::string());
+  // Add BX associated reads to bav_this
+  collect_bx_reads(wu.bx_walkers, bav_this, all_seqs, dedupe);
+  ss << "Reads in local assembly after BX import: " << bav_this.size() << std::endl;
+  WRITELOG(ss.str(), opt::verbose > 1, false);
+  ss.str(std::string());
+
   // do the assembly, contig realignment, contig local realignment, and read realignment
   // modifes bav_this, alc, all_contigs and all_microbial_contigs
   run_assembly(region, bav_this, alc, all_contigs, all_microbial_contigs, dmap, cigmap, wu.ref_genome);
