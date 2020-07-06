@@ -38,8 +38,11 @@ svabaBxBamWalker::fetchReadsByBxBarcode(const BxBarcode &bx_barcode) {
 
     // Are we still within the same BX block?
     if (GetNextRecord(bx_record)) {
-      if (isBxReadWeird(bx_record))
-        read_vector.push_back(svabaRead(bx_record, prefix));
+        if(weird_reads_only) {
+            if (isBxReadWeird(bx_record))
+                read_vector.push_back(svabaRead(bx_record, prefix));
+        } else
+          read_vector.push_back(svabaRead(bx_record, prefix));
     } else
       break;
   }
